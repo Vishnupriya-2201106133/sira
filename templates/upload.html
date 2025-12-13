@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2> class="gold-text" style="text-align:center; margin-bottom:20px;">Place New Order</h2>
+
+<div> class="glass-card" style="max-width:700px; margin:auto;">
+
+<form method="POST" enctype="multipart/form-data">
+
+    <!-- SELECT SHOP -->
+    <label>Choose Shop</label>
+    <select name="shop_id" id="shopSelect" required>
+        <option value="">-- Select Shop --</option>
+        {% for sh in shops %}
+            <option value="{{ sh.id }}">{{ sh.shop_name or sh.name }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- SELECT SERVICE -->
+    <label> style="margin-top:15px;">Choose Service</label>
+    <select name="service_id" id="serviceSelect" required>
+        <option value="">Select a shop first</option>
+    </select>
+
+    <!-- PAPER SIZE -->
+    <label> style="margin-top:15px;">Paper Size</label>
+    <select name="paper_size">
+        <option value="Not required">Not required</option>
+        <option value="A4">A4</option>
+        <option value="A3">A3</option>
+    </select>
+
+    <!-- SIDES -->
+    <label> style="margin-top:15px;">Print Sides</label>
+    <select name="sides">
+        <option value="Not required">Not required</option>
+        <option value="One side">One side</option>
+        <option value="Both sides">Both sides</option>
+    </select>
+
+    <!-- COPIES -->
+    <label> style="margin-top:15px;">Number of Copies</label>
+    <input type="number" name="copies" min="1" value="1">
+
+    <!-- DOCUMENT -->
+    <label> style="margin-top:15px;">Upload Document</label>
+    <input type="file" name="document" required>
+
+    <label> style="margin-top:15px;">Additional Notes</label>
+    <textarea name="additional"></textarea>
+
+    <button class="gold-btn" style="margin-top:20px;">Place Order</button>
+
+</form>
+</div>
+
+<!-- ******* LOAD SERVICES DYNAMICALLY ******* -->
+<script>
+document.getElementById("shopSelect").addEventListener("change", function() {
+    const shopId = this.value;
+    const serviceSelect = document.getElementById("serviceSelect");
+
+    serviceSelect.innerHTML = "<option>Loading...</option>";
+
+    fetch(`/get_services/${shopId}`)
+        .then(r => r.json())
+        .then(data => {
+            serviceSelect.innerHTML = "";
+
+            if (data.services.length === 0) {
+                serviceSelect.innerHTML = "<option>No services available</option>";
+                return;
+            }
+
+            data.services.forEach(s => {
+                const opt = document.createElement("option");
+                opt.value = s.id;
+                opt.textContent = `${s.name} — ₹${s.cost}`;
+                serviceSelect.appendChild(opt);
+            });
+        });
+});
+</script>
+
+{% endblock %}

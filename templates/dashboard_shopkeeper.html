@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1 class="gold-title">Shopkeeper Dashboard</h1>
+
+<!-- ---------------- ADD SERVICE SECTION ---------------- -->
+{% if user and user["role"] == "shopkeeper" %}
+<div class="glass-card">
+    <h2 class="section-title">Add New Service</h2>
+
+    <form method="POST" action="{{ url_for('add_service') }}">
+        <label class="gold-label">Service Name</label>
+        <input type="text" name="name" placeholder="Enter service name" required>
+
+        <label class="gold-label">Cost (₹)</label>
+        <input type="number" name="cost" step="0.1" placeholder="Enter cost" required>
+
+        <button type="submit">Add Service</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- ---------------- QR SECTION ---------------- -->
+<div class="glass-card">
+    <h2 class="section-title">Upload / Update QR Code</h2>
+
+    <form method="POST" action="{{ url_for('upload_qr') }}" enctype="multipart/form-data">
+        <label class="gold-label">Upload QR Image</label>
+        <input type="file" name="qr" accept="image/*" required>
+        <button type="submit">Upload QR</button>
+    </form>
+
+    {% if qr and qr.qr_filename %}
+        <p class="subtext">Current QR:</p>
+        <a href="{{ url_for('qr_file', filename=qr.qr_filename) }}" target="_blank">
+            <img src="{{ url_for('qr_file', filename=qr.qr_filename) }}"
+                 style="max-width:160px; border-radius:12px; margin-top:10px;">
+        </a>
+    {% else %}
+        <p class="subtext">No QR uploaded yet.</p>
+    {% endif %}
+</div>
+
+<!-- ---------------- ORDERS SECTION ---------------- -->
+<div class="section-card">
+    <h2 class="section-title">Incoming Orders</h2>
+
+    {% if orders|length == 0 %}
+        <p class="empty-text">No orders received yet.</p>
+    {% else %}
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Customer</th>
+                    <th>Service</th>
+                    <th>Paper</th>
+                    <th>Sides</th>
+                    <th>Copies</th>
+                    <th>Document</th>
+                    <th>Status</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td>{{ o.id }}</td>
+                    <td>{{ o.customer_name }}</td>
+                    <td>{{ o.service_name }}</td>
+                    <td>{{ o.paper_size }}</td>
+                    <td>{{ o.sides }}</td>
+                    <td>{{ o.copies }}</td>
+
+                    <td>
+                        {% if o.doc_filename %}
+                            <a href="{{ url_for('uploaded_file', filename=o.doc_filename) }}" target="_blank">View</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td class="status-cell">
+                        {% if o.status == 'pending' %}
+                            <span style="color:orange;font-weight:bold;">Pending</span>
+                        {% elif o.status == 'processing' %}
+                            <span style="color:blue;font-weight:bold;">Processing</span>
+                        {% elif o.status == 'completed' %}
+                            <span style="color:green;font-weight:bold;">Completed</span>
+                        {% else %}
+                            {{ o.status }}
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <select class="status-select" data-order-id="{{ o.id }}">
+                            <option value="pending" {% if o.status=='pending' %}selected{% endif %}>Pending</option>
+                            <option value="processing" {% if o.status=='processing' %}selected{% endif %}>Processing</option>
+                            <option value="completed" {% if o.status=='completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<!-- ---------------- AJAX SCRIPT FOR STATUS UPDATE ---------------- -->
+<script>
+document.querySelectorAll(".status-select").forEach(function(select) {
+    select.addEventListener("change", function() {
+        const orderId = this.getAttribute("data-order-id");
+        const newStatus = this.value;
+
+        fetch(`/shop/update_order/${orderId}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the status cell
+                const statusCell = this.parentElement.previousElementSibling;
+                statusCell.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                if(data.status=="pending") statusCell.style.color="orange";
+                else if(data.status=="processing") statusCell.style.color="blue";
+                else if(data.status=="completed") statusCell.style.color="green";
+            } else {
+                alert("Failed to update status");
+            }
+        })
+        .catch(err => alert("Error updating status: " + err));
+    });
+});
+</script>
+
+{% endblock %}

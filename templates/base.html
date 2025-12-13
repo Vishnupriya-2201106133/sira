@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIRA</title>
+
+<style>
+/* RESET */
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+    background: radial-gradient(circle at top,#0e0e0e,#000);
+    font-family:"Inter","Poppins","Segoe UI",sans-serif;
+    color:#E7C770;
+    min-height:100vh;
+    display:flex;
+}
+
+/* Sidebar */
+.sidebar{
+    width:250px;height:100vh;position:fixed;left:0;top:0;
+    background:rgba(15,15,15,0.8);
+    border-right:1px solid rgba(231,199,112,0.18);
+    padding:35px 25px;
+    backdrop-filter:blur(12px);
+}
+.sidebar img{width:160px;margin-bottom:35px;filter:drop-shadow(0 0 10px rgba(231,199,112,.6));}
+.sidebar .menu a{
+    display:block;padding:12px;border-radius:10px;margin-bottom:12px;
+    color:#E7C770;text-decoration:none;font-weight:600;
+    transition:.25s;
+}
+.sidebar .menu a:hover{
+    background:rgba(231,199,112,.15);box-shadow:0 0 15px rgba(231,199,112,.3);
+    transform:translateX(5px);
+}
+
+/* Main */
+.main{
+    margin-left:250px;padding:40px;width:calc(100% - 250px);
+}
+
+/* Flash messages */
+.flash-box{
+    background:rgba(255,255,255,.08);
+    border-left:4px solid #E7C770;
+    padding:15px;margin-bottom:25px;
+    border-radius:8px;
+}
+
+/* Global card */
+.glass-card{
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(231,199,112,.25);
+    padding:25px;border-radius:14px;margin-bottom:28px;
+}
+
+/* Inputs */
+input,select,textarea{
+    width:100%;padding:12px;margin-top:10px;
+    border-radius:10px;border:1px solid rgba(231,199,112,.28);
+    background:rgba(255,255,255,.06);color:#E7C770;
+}
+button{
+    margin-top:15px;
+    background:linear-gradient(135deg,#E7C770,#b69139);
+    padding:12px 24px;border:none;border-radius:8px;
+    font-weight:700;cursor:pointer;color:#000;
+}
+button:hover{box-shadow:0 0 15px rgba(231,199,112,.5);transform:translateY(-2px);}
+table{width:100%;margin-top:15px;border-collapse:collapse;}
+th,td{padding:12px;border-bottom:1px solid rgba(231,199,112,.2);}
+th{background:rgba(231,199,112,.12);color:#E7C770;}
+
+</style>
+</head>
+
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <img src="{{ url_for('static', filename='logo.png') }}">
+
+    <div class="menu">
+
+        {% if user %}
+            <a href="/">🏠 Home</a>
+
+            {% if user.role=='customer' %}
+                <a href="/customer/dashboard">📝 Customer Dashboard</a>
+            {% elif user.role=='shopkeeper' %}
+                <a href="/shop/dashboard">🏪 Shop Dashboard</a>
+            {% elif user.role=='admin' %}
+                <a href="/admin">🛡 Admin Panel</a>
+            {% endif %}
+
+            <a href="/logout">🚪 Logout</a>
+
+        {% else %}
+            <a href="/login">🔑 Login</a>
+            <a href="/register">🧾 Register</a>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- Main Display -->
+<div class="main">
+
+{% with messages=get_flashed_messages() %}
+{% if messages %}
+<div class="flash-box">
+    {% for msg in messages %} ✦ {{msg}}<br> {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

@@ -1,0 +1,113 @@
+/* ---------- GLOBAL FONTS ---------- */
+body {
+    background: #0d0d0d;
+    color: white;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    padding: 30px;
+}
+
+/* ---------- GOLD BRAND COLOR ---------- */
+.gold-text { color: #E7C770; }
+
+/* ---------- HEADER ---------- */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.page-title h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.subtext {
+    margin-top: 4px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+/* ---------- BUTTON ---------- */
+.primary-btn {
+    background: #E7C770;
+    color: #0d0d0d;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.25s;
+}
+
+.primary-btn:hover {
+    background: #ffdd88;
+}
+
+/* ---------- CARDS ---------- */
+.section-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 25px;
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 22px;
+    margin-bottom: 15px;
+    color: #E7C770;
+}
+
+.empty-text {
+    color: #aaa;
+    padding-top: 10px;
+}
+
+/* ---------- TABLE ---------- */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.premium-table th {
+    background: rgba(255,255,255,0.08);
+    padding: 12px;
+    text-align: left;
+    color: #E7C770;
+    font-weight: 600;
+}
+
+.premium-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.table-link {
+    color: #E7C770;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.table-link:hover {
+    text-decoration: underline;
+}
+
+/* ---------- STATUS PILL ---------- */
+.status-pill {
+    padding: 5px 12px;
+    border-radius: 25px;
+    font-size: 12px;
+    text-transform: capitalize;
+}
+
+/* Status colors */
+.status-pill.pending { background: #e3a70433; color: #E7C770; }
+.status-pill.completed { background: #2ecc7033; color: #2ecc71; }
+.status-pill.cancelled { background: #e74c3c33; color: #e74c3c; }

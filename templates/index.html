@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div style="text-align:center; margin-top:60px;">
+
+    <h1 style="font-size:40px; font-weight:800; color:#E7C770; text-shadow:0 0 15px rgba(231,199,112,.5);">
+        Welcome to SIRA
+    </h1>
+
+    <p style="font-size:17px; opacity:.8; margin-top:8px;">
+        Smart & Premium Document Printing Platform
+    </p>
+
+    <div style="width:60%; margin:auto; margin-top:35px;">
+        <div class="glass-card">
+
+            {% if not user %}
+                <p style="margin-bottom:18px;">Login or Register to continue.</p>
+
+                <a href="{{ url_for('login') }}"><button style="margin-right:10px;">Login</button></a>
+                <a href="{{ url_for('register') }}"><button>Register</button></a>
+
+            {% else %}
+                {% if user.role == 'customer' %}
+                    <a href="{{ url_for('customer_dashboard') }}"><button>Go to Customer Dashboard</button></a>
+
+                {% elif user.role == 'shopkeeper' %}
+                    <a href="{{ url_for('shop_dashboard') }}"><button>Go to Shop Dashboard</button></a>
+
+                {% elif user.role == 'admin' %}
+                    <a href="{{ url_for('admin_dashboard') }}"><button>Go to Admin Panel</button></a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

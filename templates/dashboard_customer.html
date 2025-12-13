@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1 class="gold-title">Customer Dashboard</h1>
+
+<!-- PLACE NEW ORDER SECTION -->
+<div class="glass-card">
+    <h2 class="section-title">Place New Order</h2>
+
+    <form method="POST" action="{{ url_for('new_order') }}" enctype="multipart/form-data">
+        <label class="gold-label">Select Shop</label>
+        <select name="shop_id" id="shop-select" required>
+            <option value="">-- Select Shop --</option>
+            {% for shop in shops %}
+                <option value="{{ shop.id }}">{{ shop.shop_name }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="gold-label">Select Service</label>
+        <select name="service_id" id="service-select" required>
+            <option value="">-- Select Service --</option>
+        </select>
+
+        <label class="gold-label">Paper Size</label>
+        <input type="text" name="paper_size" placeholder="e.g., A4, A3" required>
+
+        <label class="gold-label">Sides</label>
+        <select name="sides" required>
+            <option value="single">Single</option>
+            <option value="double">Double</option>
+        </select>
+
+        <label class="gold-label">Color</label>
+        <select name="color">
+            <option value="Black & White">Black & White</option>
+            <option value="Color">Color</option>
+        </select>
+
+        <label class="gold-label">Copies</label>
+        <input type="number" name="copies" value="1" min="1">
+
+        <label class="gold-label">Additional Notes</label>
+        <textarea name="additional"></textarea>
+
+        <label class="gold-label">Upload Document</label>
+        <input type="file" name="document" required>
+
+        <button type="submit">Place Order</button>
+    </form>
+</div>
+
+<!-- ORDERS SECTION -->
+<div class="section-card">
+    <h2 class="section-title">Your Orders</h2>
+
+    {% if orders|length == 0 %}
+        <p class="empty-text">No orders placed yet.</p>
+    {% else %}
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Shop</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>QR</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in orders %}
+                <tr>
+                    <td>{{ o.id }}</td>
+                    <td>{{ o.shop_name }}</td>
+                    <td>{{ o.service_name }}</td>
+                    <td>{{ o.status }}</td>
+                    <td>
+                        {% if o.qr_filename %}
+                            <a href="{{ url_for('qr_file', filename=o.qr_filename) }}" target="_blank">
+                                <img src="{{ url_for('qr_file', filename=o.qr_filename) }}" 
+                                     style="max-width:80px; border-radius:8px;">
+                            </a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<script>
+    // Fetch services dynamically when a shop is selected
+    document.getElementById('shop-select').addEventListener('change', function() {
+        let shopId = this.value;
+        let serviceSelect = document.getElementById('service-select');
+        serviceSelect.innerHTML = '<option value="">Loading...</option>';
+
+        if(shopId) {
+            fetch(`/get_services/${shopId}`)
+            .then(response => response.json())
+            .then(data => {
+                serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+                data.services.forEach(s => {
+                    let option = document.createElement('option');
+                    option.value = s.id;
+                    option.textContent = `${s.name} - ₹${s.cost}`;
+                    serviceSelect.appendChild(option);
+                });
+            });
+        } else {
+            serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+        }
+    });
+</script>
+
+{% endblock %}

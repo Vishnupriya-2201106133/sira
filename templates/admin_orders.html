@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="page-title">All Orders (Admin View)</h2>
+
+<div class="admin-container">
+
+    <div class="admin-card">
+        <table>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Shopkeeper</th>
+                <th>Service</th>
+                <th>Paper Size</th>
+                <th>Sides</th>
+                <th>Color</th>
+                <th>Copies</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+
+            {% for o in orders %}
+            <tr>
+                <td>{{ o.id }}</td>
+                <td>{{ o.customer_name }}</td>
+                <td>{{ o.shop_name }} ({{ o.shopkeeper_name }})</td>
+                <td>{{ o.service_name }}</td>
+                <td>{{ o.paper_size }}</td>
+                <td>{{ o.sides }}</td>
+                <td>{{ o.color }}</td>
+                <td>{{ o.copies }}</td>
+                <td>{{ o.status }}</td>
+                <td>{{ o.created_at }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+</div>
+
+<style>
+.page-title {
+    margin-bottom: 20px;
+}
+
+.admin-container {
+    display: grid;
+    gap: 20px;
+}
+
+.admin-card {
+    padding: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 15px;
+    backdrop-filter: blur(8px);
+}
+
+.admin-card table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-card table th,
+.admin-card table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.admin-card table tr:hover {
+    background: rgba(255,255,255,0.1);
+}
+</style>
+
+{% endblock %}

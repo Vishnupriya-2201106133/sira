@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="page-title">Admin Dashboard</h2>
+
+<div class="admin-container">
+
+    <!-- Daily Orders -->
+    <div class="admin-card highlight">
+        <h3>Today's Orders</h3>
+        <p class="big-number">{{ daily_orders }}</p>
+    </div>
+
+    <!-- Shopkeepers -->
+    <div class="admin-card">
+        <h3>Registered Shopkeepers</h3>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Shop Name</th>
+                <th>Email</th>
+            </tr>
+            {% for s in shopkeepers %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.shop_name }}</td>
+                <td>{{ s.email }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Customers -->
+    <div class="admin-card">
+        <h3>Registered Customers</h3>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+            </tr>
+            {% for c in customers %}
+            <tr>
+                <td>{{ c.name }}</td>
+                <td>{{ c.email }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Shopkeeper Orders Stats -->
+    <div class="admin-card">
+        <h3>Orders Received by Shopkeepers</h3>
+        <table>
+            <tr>
+                <th>Shop Name</th>
+                <th>Total Orders</th>
+            </tr>
+            {% for s in shop_orders %}
+            <tr>
+                <td>{{ s.shop_name }}</td>
+                <td>{{ s.order_count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <a href="{{ url_for('admin_orders') }}">
+        <button class="btn-primary">View All Orders →</button>
+    </a>
+
+</div>
+
+<style>
+.page-title {
+    margin-bottom: 20px;
+}
+
+.admin-container {
+    display: grid;
+    gap: 20px;
+}
+
+.admin-card {
+    padding: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 15px;
+    backdrop-filter: blur(8px);
+}
+
+.admin-card table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+.admin-card table th,
+.admin-card table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.big-number {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.highlight {
+    background: rgba(0,150,255,0.2);
+    border-left: 5px solid #0096ff;
+}
+
+.btn-primary {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    background: #0096ff;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+}
+</style>
+
+{% endblock %}

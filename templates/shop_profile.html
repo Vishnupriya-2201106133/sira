@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="gold-text">{{ shop['shop_name'] or shop['name'] }}</h1>
+        <p class="subtext">Official shop profile • View services & payment QR</p>
+    </div>
+</div>
+
+<!-- SERVICES SECTION -->
+<div class="section-card">
+    <h2 class="section-title">Services Offered</h2>
+
+    {% if services|length == 0 %}
+        <p class="empty-text">No services listed for this shop.</p>
+    {% else %}
+    <div class="table-wrapper">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Service Name</th>
+                    <th>Cost (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in services %}
+                <tr>
+                    <td>{{ s.name }}</td>
+                    <td>{{ s.cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- QR PAYMENT SECTION -->
+{% if qr %}
+<div class="section-card">
+    <h2 class="section-title">Pay via QR</h2>
+
+    <div> style="display:flex; align-items:center; gap:25px; flex-wrap:wrap;">
+        <img> src="{{ url_for('qr_file', filename=qr['qr_filename']) }}" </div>
+             style="max-width:180px; border-radius:14px; box-shadow:0 0 18px rgba(231,199,112,0.4);">
+
+        <div>
+            <p> class="subtext" style="font-size:15px; line-height:1.6;">
+                Scan the QR code to pay for your prints.<br>
+                After payment, kindly inform the shopkeeper.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

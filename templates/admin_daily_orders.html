@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1 class="gold-title">📅 Admin – Daily Order Overview</h1>
+<p> style="margin-bottom:10px;">Date: <b>{{ today }}</b></p>
+
+<!-- Today Shop Summary -->
+<div class="glass-card">
+    <h2>🏬 Orders Today (Shop-wise)</h2>
+    {% if shop_summary %}
+    <table class="premium-table">
+        <tr><th>Shop</th><th>Total Orders</th></tr>
+        {% for s in shop_summary %}
+        <tr><td>{{ s.shop_name }}</td><td>{{ s.total_orders }}</td></tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No orders today.</p>
+    {% endif %}
+</div>
+
+<!-- All Orders Today -->
+<div class="glass-card">
+    <h2>📦 All Orders Today</h2>
+    {% if today_orders %}
+    <table class="premium-table">
+        <tr>
+            <th>ID</th><th>Shop</th><th>Service</th><th>Copies</th><th>Status</th><th>Time</th>
+        </tr>
+        {% for o in today_orders %}
+        <tr>
+            <td>{{ o.id }}</td>
+            <td>{{ o.shopkeeper }}</td>
+            <td>{{ o.service_name }}</td>
+            <td>{{ o.copies }}</td>
+            <td>{{ o.status }}</td>
+            <td>{{ o.created_at[11:16] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No orders placed today.</p>
+    {% endif %}
+</div>
+
+
+<!-- History -->
+<div class="glass-card">
+    <h2>📊 Orders Last 30 Days</h2>
+    <table class="premium-table">
+        <tr><th>Date</th><th>Total Orders</th></tr>
+        {% for h in history %}
+        <tr><td>{{ h.day }}</td><td>{{ h.count }}</td></tr>
+        {% endfor %}
+    </table>
+</div>
+
+{% endblock %}
