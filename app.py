@@ -11,7 +11,8 @@ QR_FOLDER = os.path.join(BASE_DIR, 'static', 'qr')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(QR_FOLDER, exist_ok=True)
 
-DB = os.path.join(BASE_DIR, 'sira.db')
+DB = os.path.join("/data", "sira.db")
+
 
 app = Flask(__name__)
 app.secret_key = "change-me-now"
@@ -404,4 +405,4 @@ def qr_file(filename):
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
