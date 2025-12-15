@@ -4,24 +4,22 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
-QR_FOLDER = os.path.join(BASE_DIR, 'static', 'qr')
+# ---------------- RENDER SAFE PATH ----------------
+DB_PATH = "/data/sira.db"
 
+UPLOAD_FOLDER = "static/uploads"
+QR_FOLDER = "static/qr"
+
+os.makedirs("/data", exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(QR_FOLDER, exist_ok=True)
 
-DB = os.path.join("/data", "sira.db")
-
-
 app = Flask(__name__)
 app.secret_key = "change-me-now"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["QR_FOLDER"] = QR_FOLDER
 
 # ---------------- DATABASE ----------------
 def get_db():
-    conn = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 

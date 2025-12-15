@@ -2,8 +2,5 @@ __pycache__/
 *.pyc
 *.db
 
-static/uploads/
-static/qr/
-
-.env
-venv/
+static/uploads/*
+static/qr/*
