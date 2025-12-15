@@ -4,13 +4,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-# ---------------- RENDER SAFE PATH ----------------
-DB_PATH = "/data/sira.db"
+# ---------------- SAFE PATH (RENDER + LOCAL) ----------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "sira.db")
 
-UPLOAD_FOLDER = "static/uploads"
-QR_FOLDER = "static/qr"
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+QR_FOLDER = os.path.join(BASE_DIR, "static", "qr")
 
-os.makedirs("/data", exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(QR_FOLDER, exist_ok=True)
 
@@ -22,6 +22,7 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     conn = get_db()
