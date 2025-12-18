@@ -238,12 +238,18 @@ def customer_dashboard():
 
     conn = get_db()
     orders = conn.execute("""
-        SELECT o.*, s.name AS service_name, sh.shop_name
-        FROM orders o
-        LEFT JOIN services s ON o.service_id = s.id
-        LEFT JOIN users sh ON o.shop_id = sh.id
-        WHERE o.customer_id=?
-    """, (user["id"],)).fetchall()
+    SELECT o.*, 
+           s.name AS service_name, 
+           sh.shop_name AS shop_name, 
+           COALESCE(q.qr_filename, '') AS qr_filename
+    FROM orders o
+    LEFT JOIN services s ON o.service_id = s.id
+    LEFT JOIN users sh ON o.shop_id = sh.id
+    LEFT JOIN qr q ON sh.id = q.shop_id
+    WHERE o.customer_id=?
+    ORDER BY o.created_at DESC
+""", (user["id"],)).fetchall()
+
 
     shops = conn.execute("SELECT * FROM users WHERE role='shopkeeper'").fetchall()
     conn.close()
