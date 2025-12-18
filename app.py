@@ -1,289 +1,263 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
-import sqlite3, os
-from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
-from datetime import datetime
-
-# ---------------- SAFE PATH (RENDER + LOCAL) ----------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "sira.db")
-
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-QR_FOLDER = os.path.join(BASE_DIR, "static", "qr")
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(QR_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
-app.secret_key = "change-me-now"
+app.secret_key = "sira_secret_key"
 
-# ---------------- DATABASE ----------------
-def get_db():
+# ======================
+# DATABASE CONFIG (Render safe)
+# ======================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "database.db")
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ======================
+# DATABASE CONNECTION
+# ======================
+def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+# ======================
+# INIT DATABASE + DEMO DATA
+# ======================
 def init_db():
-    conn = get_db()
-    conn.executescript("""
+    conn = get_db_connection()
+
+    conn.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         email TEXT UNIQUE,
         password TEXT,
-        role TEXT,
-        shop_name TEXT
-    );
+        role TEXT
+    )
+    """)
 
+    conn.execute("""
     CREATE TABLE IF NOT EXISTS services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shop_id INTEGER,
         name TEXT,
-        cost REAL
-    );
+        price INTEGER
+    )
+    """)
 
+    conn.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER,
         shop_id INTEGER,
         service_id INTEGER,
-        doc_filename TEXT,
-        paper_size TEXT,
-        sides TEXT,
-        color TEXT,
-        copies INTEGER,
-        additional TEXT,
-        status TEXT DEFAULT 'pending',
-        created_at TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS qr (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        shop_id INTEGER UNIQUE,
-        qr_filename TEXT
-    );
+        file_name TEXT,
+        status TEXT
+    )
     """)
-    conn.commit()
-    conn.close()
 
-# ---------------- DEMO DATA ----------------
-def create_demo_data():
-    conn = get_db()
-
-    # Demo shopkeeper
+    # -------- DEMO SHOPKEEPER --------
     shop = conn.execute(
-        "SELECT id FROM users WHERE email='shopkeeper@sira.com'"
+        "SELECT * FROM users WHERE email = ?",
+        ("demo@shop.com",)
     ).fetchone()
 
     if not shop:
         conn.execute("""
-            INSERT INTO users (name,email,password,role,shop_name)
-            VALUES (?,?,?,?,?)
-        """, (
-            "Demo Shopkeeper",
-            "shopkeeper@sira.com",
-            generate_password_hash("demo123"),
-            "shopkeeper",
-            "SIRA Demo Print Shop"
-        ))
+        INSERT INTO users (name, email, password, role)
+        VALUES (?, ?, ?, ?)
+        """, ("Demo Shopkeeper", "demo@shop.com", "demo123", "shopkeeper"))
         conn.commit()
-        shop = conn.execute(
-            "SELECT id FROM users WHERE email='shopkeeper@sira.com'"
-        ).fetchone()
 
-    shop_id = shop["id"]
-
-    # Demo customer
-    customer = conn.execute(
-        "SELECT id FROM users WHERE email='customer@sira.com'"
+    shop = conn.execute(
+        "SELECT * FROM users WHERE email = ?",
+        ("demo@shop.com",)
     ).fetchone()
 
-    if not customer:
-        conn.execute("""
-            INSERT INTO users (name,email,password,role)
-            VALUES (?,?,?,?)
-        """, (
-            "Demo Customer",
-            "customer@sira.com",
-            generate_password_hash("demo123"),
-            "customer"
-        ))
-        conn.commit()
-        customer = conn.execute(
-            "SELECT id FROM users WHERE email='customer@sira.com'"
-        ).fetchone()
-
-    customer_id = customer["id"]
-
-    # Demo service
+    # -------- DEMO SERVICE --------
     service = conn.execute(
-        "SELECT id FROM services WHERE shop_id=?",
-        (shop_id,)
+        "SELECT * FROM services WHERE shop_id = ?",
+        (shop["id"],)
     ).fetchone()
 
     if not service:
         conn.execute("""
-            INSERT INTO services (shop_id,name,cost)
-            VALUES (?,?,?)
-        """, (shop_id, "Black & White Printing", 2))
-        conn.commit()
-        service = conn.execute(
-            "SELECT id FROM services WHERE shop_id=?",
-            (shop_id,)
-        ).fetchone()
-
-    service_id = service["id"]
-
-    # Demo order
-    order = conn.execute("SELECT id FROM orders").fetchone()
-    if not order:
-        conn.execute("""
-            INSERT INTO orders (
-                customer_id, shop_id, service_id,
-                paper_size, sides, color, copies,
-                additional, created_at
-            )
-            VALUES (?,?,?,?,?,?,?,?,?)
-        """, (
-            customer_id,
-            shop_id,
-            service_id,
-            "A4",
-            "Single Side",
-            "Black & White",
-            1,
-            "Demo order for testing",
-            datetime.utcnow().isoformat()
-        ))
+        INSERT INTO services (shop_id, name, price)
+        VALUES (?, ?, ?)
+        """, (shop["id"], "Black & White Print (Demo)", 2))
         conn.commit()
 
     conn.close()
 
 init_db()
-create_demo_data()
 
-# ---------------- USER SESSION ----------------
-def current_user():
-    uid = session.get("user_id")
-    if not uid:
-        return None
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-    conn.close()
-    return user
-
-# ---------------- HOME ----------------
+# ======================
+# HOME
+# ======================
 @app.route("/")
 def index():
-    return render_template("index.html", user=current_user())
+    return render_template("index.html")
 
-# ---------------- AUTH ----------------
+# ======================
+# REGISTER
+# ======================
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        name = request.form.get("name")
-        email = request.form.get("email")
-        password = request.form.get("password")
-        role = request.form.get("role")
-        shop_name = request.form.get("shop_name") or None
+        name = request.form["name"]
+        email = request.form["email"]
+        password = request.form["password"]
+        role = request.form["role"]
 
-        if not email or not password or role not in ["customer", "shopkeeper", "admin"]:
-            flash("Fill all fields properly.")
-            return redirect(url_for("register"))
-
-        conn = get_db()
+        conn = get_db_connection()
         try:
             conn.execute(
-                "INSERT INTO users (name,email,password,role,shop_name) VALUES (?,?,?,?,?)",
-                (name, email, generate_password_hash(password), role, shop_name),
+                "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+                (name, email, password, role),
             )
             conn.commit()
+            flash("Account created! Please login.")
+            return redirect(url_for("login"))
         except:
-            flash("Email already exists.")
+            flash("Email already exists")
         finally:
             conn.close()
 
-        return redirect(url_for("login"))
-
     return render_template("register.html")
 
+# ======================
+# LOGIN
+# ======================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
 
-        conn = get_db()
-        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        conn = get_db_connection()
+        user = conn.execute(
+            "SELECT * FROM users WHERE email=? AND password=?",
+            (email, password),
+        ).fetchone()
         conn.close()
 
-        if user and check_password_hash(user["password"], password):
-            session["user_id"] = user["id"]
-            return redirect(url_for("index"))
+        if user:
+            session["user"] = dict(user)
+            flash("Login successful")
 
-        flash("Invalid credentials.")
+            if user["role"] == "customer":
+                return redirect(url_for("customer_dashboard"))
+            else:
+                return redirect(url_for("shopkeeper_dashboard"))
+        else:
+            flash("Invalid credentials")
+
     return render_template("login.html")
 
+# ======================
+# LOGOUT
+# ======================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
 
-# ---------------- CUSTOMER ----------------
+# ======================
+# CUSTOMER DASHBOARD
+# ======================
 @app.route("/customer/dashboard")
 def customer_dashboard():
-    user = current_user()
-    if not user or user["role"] != "customer":
+    if "user" not in session or session["user"]["role"] != "customer":
         return redirect(url_for("login"))
 
-    conn = get_db()
+    conn = get_db_connection()
+
+    shops = conn.execute(
+        "SELECT * FROM users WHERE role='shopkeeper'"
+    ).fetchall()
+
     orders = conn.execute("""
-    SELECT o.*, 
-           s.name AS service_name, 
-           sh.shop_name AS shop_name, 
-           COALESCE(q.qr_filename, '') AS qr_filename
-    FROM orders o
-    LEFT JOIN services s ON o.service_id = s.id
-    LEFT JOIN users sh ON o.shop_id = sh.id
-    LEFT JOIN qr q ON sh.id = q.shop_id
-    WHERE o.customer_id=?
-    ORDER BY o.created_at DESC
-""", (user["id"],)).fetchall()
+        SELECT orders.*, services.name AS service_name
+        FROM orders
+        JOIN services ON orders.service_id = services.id
+        WHERE customer_id = ?
+    """, (session["user"]["id"],)).fetchall()
 
-
-    shops = conn.execute("SELECT * FROM users WHERE role='shopkeeper'").fetchall()
     conn.close()
 
-    return render_template("dashboard_customer.html", user=user, orders=orders, shops=shops)
+    return render_template(
+        "dashboard_customer.html",
+        user=session["user"],
+        shops=shops,
+        orders=orders
+    )
 
-# ---------------- SHOPKEEPER ----------------
-@app.route("/shop/dashboard")
-def shop_dashboard():
-    user = current_user()
-    if not user or user["role"] != "shopkeeper":
+# ======================
+# NEW ORDER (🔥 FIXED)
+# ======================
+@app.route("/new_order", methods=["POST"])
+def new_order():
+    if "user" not in session or session["user"]["role"] != "customer":
         return redirect(url_for("login"))
 
-    conn = get_db()
-    orders = conn.execute("""
-        SELECT o.*, c.name AS customer_name, s.name AS service_name
-        FROM orders o
-        LEFT JOIN users c ON o.customer_id = c.id
-        LEFT JOIN services s ON o.service_id = s.id
-        WHERE o.shop_id=?
-    """, (user["id"],)).fetchall()
+    shop_id = request.form.get("shop_id")
+    service_id = request.form.get("service_id")
+    file = request.files.get("document")
+
+    if not shop_id or not service_id or not file:
+        flash("All fields required")
+        return redirect(url_for("customer_dashboard"))
+
+    filename = secure_filename(file.filename)
+    file.save(os.path.join(UPLOAD_FOLDER, filename))
+
+    conn = get_db_connection()
+    conn.execute("""
+        INSERT INTO orders (customer_id, shop_id, service_id, file_name, status)
+        VALUES (?, ?, ?, ?, 'Pending')
+    """, (session["user"]["id"], shop_id, service_id, filename))
+    conn.commit()
     conn.close()
 
-    return render_template("dashboard_shopkeeper.html", user=user, orders=orders)
+    flash("Order placed successfully!")
+    return redirect(url_for("customer_dashboard"))
 
-# ---------------- STATIC ----------------
-@app.route("/static/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+# ======================
+# SHOPKEEPER DASHBOARD
+# ======================
+@app.route("/shopkeeper/dashboard")
+def shopkeeper_dashboard():
+    if "user" not in session or session["user"]["role"] != "shopkeeper":
+        return redirect(url_for("login"))
 
-@app.route("/static/qr/<path:filename>")
-def qr_file(filename):
-    return send_from_directory(QR_FOLDER, filename)
+    conn = get_db_connection()
 
-# ---------------- RUN ----------------
+    services = conn.execute(
+        "SELECT * FROM services WHERE shop_id=?",
+        (session["user"]["id"],)
+    ).fetchall()
+
+    orders = conn.execute("""
+        SELECT orders.*, users.name AS customer_name, services.name AS service_name
+        FROM orders
+        JOIN users ON orders.customer_id = users.id
+        JOIN services ON orders.service_id = services.id
+        WHERE orders.shop_id = ?
+    """, (session["user"]["id"],)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "dashboard_shopkeeper.html",
+        services=services,
+        orders=orders
+    )
+
+# ======================
+# RUN
+# ======================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
