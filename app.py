@@ -23,7 +23,6 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-
 def init_db():
     conn = get_db()
     conn.executescript("""
@@ -67,7 +66,101 @@ def init_db():
     conn.commit()
     conn.close()
 
+# ---------------- DEMO DATA ----------------
+def create_demo_data():
+    conn = get_db()
+
+    # Demo shopkeeper
+    shop = conn.execute(
+        "SELECT id FROM users WHERE email='shopkeeper@sira.com'"
+    ).fetchone()
+
+    if not shop:
+        conn.execute("""
+            INSERT INTO users (name,email,password,role,shop_name)
+            VALUES (?,?,?,?,?)
+        """, (
+            "Demo Shopkeeper",
+            "shopkeeper@sira.com",
+            generate_password_hash("demo123"),
+            "shopkeeper",
+            "SIRA Demo Print Shop"
+        ))
+        conn.commit()
+        shop = conn.execute(
+            "SELECT id FROM users WHERE email='shopkeeper@sira.com'"
+        ).fetchone()
+
+    shop_id = shop["id"]
+
+    # Demo customer
+    customer = conn.execute(
+        "SELECT id FROM users WHERE email='customer@sira.com'"
+    ).fetchone()
+
+    if not customer:
+        conn.execute("""
+            INSERT INTO users (name,email,password,role)
+            VALUES (?,?,?,?)
+        """, (
+            "Demo Customer",
+            "customer@sira.com",
+            generate_password_hash("demo123"),
+            "customer"
+        ))
+        conn.commit()
+        customer = conn.execute(
+            "SELECT id FROM users WHERE email='customer@sira.com'"
+        ).fetchone()
+
+    customer_id = customer["id"]
+
+    # Demo service
+    service = conn.execute(
+        "SELECT id FROM services WHERE shop_id=?",
+        (shop_id,)
+    ).fetchone()
+
+    if not service:
+        conn.execute("""
+            INSERT INTO services (shop_id,name,cost)
+            VALUES (?,?,?)
+        """, (shop_id, "Black & White Printing", 2))
+        conn.commit()
+        service = conn.execute(
+            "SELECT id FROM services WHERE shop_id=?",
+            (shop_id,)
+        ).fetchone()
+
+    service_id = service["id"]
+
+    # Demo order
+    order = conn.execute("SELECT id FROM orders").fetchone()
+    if not order:
+        conn.execute("""
+            INSERT INTO orders (
+                customer_id, shop_id, service_id,
+                paper_size, sides, color, copies,
+                additional, created_at
+            )
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, (
+            customer_id,
+            shop_id,
+            service_id,
+            "A4",
+            "Single Side",
+            "Black & White",
+            1,
+            "Demo order for testing",
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+
+    conn.close()
+
 init_db()
+create_demo_data()
 
 # ---------------- USER SESSION ----------------
 def current_user():
@@ -88,33 +181,28 @@ def index():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-
         name = request.form.get("name")
         email = request.form.get("email")
         password = request.form.get("password")
         role = request.form.get("role")
         shop_name = request.form.get("shop_name") or None
 
-        # allow admin creation also
         if not email or not password or role not in ["customer", "shopkeeper", "admin"]:
             flash("Fill all fields properly.")
             return redirect(url_for("register"))
-
-        hashed = generate_password_hash(password)
 
         conn = get_db()
         try:
             conn.execute(
                 "INSERT INTO users (name,email,password,role,shop_name) VALUES (?,?,?,?,?)",
-                (name, email, hashed, role, shop_name),
+                (name, email, generate_password_hash(password), role, shop_name),
             )
             conn.commit()
         except:
-            flash("Error: Email already in use.")
+            flash("Email already exists.")
         finally:
             conn.close()
 
-        flash("Registered successfully.")
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -134,180 +222,12 @@ def login():
             return redirect(url_for("index"))
 
         flash("Invalid credentials.")
-        return redirect(url_for("login"))
-
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
-
-# ---------------- ADMIN ----------------
-@app.route("/admin/dashboard")
-def admin_dashboard():
-    user = current_user()
-    if not user or user["role"] != "admin":
-        flash("Admin access only.")
-        return redirect(url_for("login"))
-
-    conn = get_db()
-
-    shopkeepers = conn.execute(
-        "SELECT id, name, email, shop_name FROM users WHERE role='shopkeeper'"
-    ).fetchall()
-
-    customers = conn.execute(
-        "SELECT id, name, email FROM users WHERE role='customer'"
-    ).fetchall()
-
-    shop_orders = conn.execute("""
-        SELECT sh.id, COALESCE(sh.shop_name, sh.name) AS shop_name, COUNT(o.id) AS order_count
-        FROM users sh
-        LEFT JOIN orders o ON sh.id = o.shop_id
-        WHERE sh.role='shopkeeper'
-        GROUP BY sh.id
-        ORDER BY order_count DESC
-    """).fetchall()
-
-    today = datetime.utcnow().date().isoformat()
-    today_count = conn.execute(
-        "SELECT COUNT(*) AS total FROM orders WHERE DATE(created_at)=?",
-        (today,)
-    ).fetchone()["total"]
-
-    conn.close()
-
-    return render_template(
-        "dashboard_admin.html",
-        user=user,
-        shopkeepers=shopkeepers,
-        customers=customers,
-        shop_orders=shop_orders,
-        daily_orders=today_count,
-    )
-
-@app.route("/admin/orders")
-def admin_orders():
-    user = current_user()
-    if not user or user["role"] != "admin":
-        flash("Admin access only.")
-        return redirect(url_for("login"))
-
-    conn = get_db()
-    orders = conn.execute("""
-        SELECT o.*,
-               c.name AS customer_name,
-               s.name AS service_name,
-               sh.shop_name AS shop_name,
-               sh.name AS shopkeeper_name
-        FROM orders o
-        LEFT JOIN users c ON o.customer_id = c.id
-        LEFT JOIN services s ON o.service_id = s.id
-        LEFT JOIN users sh ON o.shop_id = sh.id
-        ORDER BY o.created_at DESC
-    """).fetchall()
-    conn.close()
-
-    return render_template("admin_orders.html", user=user, orders=orders)
-
-# ---------------- SHOPKEEPER ----------------
-@app.route("/shop/dashboard")
-def shop_dashboard():
-    user = current_user()
-    if not user or user["role"] != "shopkeeper":
-        flash("Login as shopkeeper.")
-        return redirect(url_for("login"))
-
-    conn = get_db()
-
-    services = conn.execute("SELECT * FROM services WHERE shop_id=?", (user["id"],)).fetchall()
-
-    orders = conn.execute("""
-        SELECT o.*, c.name AS customer_name, s.name AS service_name
-        FROM orders o
-        LEFT JOIN users c ON o.customer_id = c.id
-        LEFT JOIN services s ON o.service_id = s.id
-        WHERE o.shop_id=?
-        ORDER BY o.created_at DESC
-    """, (user["id"],)).fetchall()
-
-    qr = conn.execute("SELECT * FROM qr WHERE shop_id=?", (user["id"],)).fetchone()
-
-    conn.close()
-
-    return render_template(
-        "dashboard_shopkeeper.html",
-        user=user,
-        services=services,
-        orders=orders,
-        qr=qr,
-    )
-
-@app.route("/shop/add_service", methods=["POST"])
-def add_service():
-    user = current_user()
-    if not user or user["role"] != "shopkeeper":
-        return redirect(url_for("login"))
-
-    name = request.form.get("name")
-    cost = float(request.form.get("cost") or 0)
-
-    conn = get_db()
-    conn.execute("INSERT INTO services (shop_id,name,cost) VALUES (?,?,?)", 
-                 (user["id"], name, cost))
-    conn.commit()
-    conn.close()
-
-    flash("Service added.")
-    return redirect(url_for("shop_dashboard"))
-
-@app.route("/shop/upload_qr", methods=["POST"])
-def upload_qr():
-    user = current_user()
-    if not user or user["role"] != "shopkeeper":
-        return redirect(url_for("login"))
-
-    file = request.files.get("qr")
-    if not file or not file.filename:
-        flash("No file selected.")
-        return redirect(url_for("shop_dashboard"))
-
-    filename = secure_filename(f"{user['id']}_qr.png")
-    file.save(os.path.join(QR_FOLDER, filename))
-
-    conn = get_db()
-    exists = conn.execute(
-        "SELECT * FROM qr WHERE shop_id=?", (user["id"],)
-    ).fetchone()
-
-    if exists:
-        conn.execute("UPDATE qr SET qr_filename=? WHERE shop_id=?", 
-                     (filename, user["id"]))
-    else:
-        conn.execute("INSERT INTO qr (shop_id,qr_filename) VALUES (?,?)", 
-                     (user["id"], filename))
-
-    conn.commit()
-    conn.close()
-
-    flash("QR uploaded.")
-    return redirect(url_for("shop_dashboard"))
-
-@app.route("/shop/update_order/<int:order_id>", methods=["POST"])
-def update_order(order_id):
-    user = current_user()
-    if not user or user["role"] != "shopkeeper":
-        return redirect(url_for("login"))
-
-    status = request.form.get("status")
-
-    conn = get_db()
-    conn.execute("UPDATE orders SET status=? WHERE id=?", (status, order_id))
-    conn.commit()
-    conn.close()
-
-    return redirect(url_for("shop_dashboard"))
 
 # ---------------- CUSTOMER ----------------
 @app.route("/customer/dashboard")
@@ -317,15 +237,12 @@ def customer_dashboard():
         return redirect(url_for("login"))
 
     conn = get_db()
-
     orders = conn.execute("""
-        SELECT o.*, s.name AS service_name, sh.shop_name AS shop_name, q.qr_filename
+        SELECT o.*, s.name AS service_name, sh.shop_name
         FROM orders o
         LEFT JOIN services s ON o.service_id = s.id
         LEFT JOIN users sh ON o.shop_id = sh.id
-        LEFT JOIN qr q ON sh.id = q.shop_id
         WHERE o.customer_id=?
-        ORDER BY o.created_at DESC
     """, (user["id"],)).fetchall()
 
     shops = conn.execute("SELECT * FROM users WHERE role='shopkeeper'").fetchall()
@@ -333,67 +250,26 @@ def customer_dashboard():
 
     return render_template("dashboard_customer.html", user=user, orders=orders, shops=shops)
 
-@app.route("/customer/new_order", methods=["GET", "POST"])
-def new_order():
+# ---------------- SHOPKEEPER ----------------
+@app.route("/shop/dashboard")
+def shop_dashboard():
     user = current_user()
-    if not user or user["role"] != "customer":
+    if not user or user["role"] != "shopkeeper":
         return redirect(url_for("login"))
 
     conn = get_db()
-    shops = conn.execute("SELECT * FROM users WHERE role='shopkeeper'").fetchall()
-
-    if request.method == "POST":
-
-        shop_id = request.form.get("shop_id")
-        service_id = request.form.get("service_id")
-        paper_size = request.form.get("paper_size")
-        sides = request.form.get("sides")
-        color = request.form.get("color") or "Not required"
-        copies = int(request.form.get("copies") or 1)
-        additional = request.form.get("additional") or ""
-
-        file = request.files.get("document")
-        filename = None
-
-        if file and file.filename:
-            filename = secure_filename(
-                f"{user['id']}_{datetime.utcnow().timestamp()}_{file.filename}"
-            )
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
-
-        created_at = datetime.utcnow().isoformat()
-
-        conn.execute("""
-            INSERT INTO orders (customer_id,shop_id,service_id,doc_filename,
-                                paper_size,sides,color,copies,additional,created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
-        """, (user["id"], shop_id, service_id, filename, paper_size, sides, color, copies, additional, created_at))
-
-        conn.commit()
-        conn.close()
-
-        flash("Order placed.")
-        return redirect(url_for("customer_dashboard"))
-
-    return render_template("upload.html", user=user, shops=shops)
-
-# ---------------- GET SERVICES ----------------
-@app.route("/get_services/<int:shop_id>")
-def get_services(shop_id):
-    conn = get_db()
-    services = conn.execute(
-        "SELECT id, name, cost FROM services WHERE shop_id=?", 
-        (shop_id,)
-    ).fetchall()
+    orders = conn.execute("""
+        SELECT o.*, c.name AS customer_name, s.name AS service_name
+        FROM orders o
+        LEFT JOIN users c ON o.customer_id = c.id
+        LEFT JOIN services s ON o.service_id = s.id
+        WHERE o.shop_id=?
+    """, (user["id"],)).fetchall()
     conn.close()
-    return {
-        "services": [
-            {"id": s["id"], "name": s["name"], "cost": s["cost"]} 
-            for s in services
-        ]
-    }
 
-# ---------------- STATIC FILES ----------------
+    return render_template("dashboard_shopkeeper.html", user=user, orders=orders)
+
+# ---------------- STATIC ----------------
 @app.route("/static/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)

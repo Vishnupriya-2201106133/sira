@@ -111,3 +111,61 @@ body {
 .status-pill.pending { background: #e3a70433; color: #E7C770; }
 .status-pill.completed { background: #2ecc7033; color: #2ecc71; }
 .status-pill.cancelled { background: #e74c3c33; color: #e74c3c; }
+
+/* ================= MOBILE RESPONSIVE FIX ================= */
+@media (max-width: 768px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Stack layout vertically */
+  .container,
+  .main-container,
+  .hero,
+  .home-container {
+    flex-direction: column !important;
+    width: 100%;
+  }
+
+  /* Hide vertical divider line */
+  .divider,
+  .vertical-line,
+  .line {
+    display: none !important;
+  }
+
+  /* Center everything */
+  .left-section,
+  .right-section,
+  .content,
+  .hero-content {
+    width: 100% !important;
+    text-align: center;
+    padding: 20px;
+  }
+
+  /* Fix headings */
+  h1 {
+    font-size: 26px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+
+  /* Buttons full width */
+  button,
+  .btn,
+  .login-btn,
+  .register-btn {
+    width: 90%;
+    margin: 10px auto;
+    display: block;
+  }
+
+}
