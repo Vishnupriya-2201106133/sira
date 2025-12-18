@@ -9,8 +9,17 @@ app.secret_key = "sira_secret_key"
 # ======================
 # DATABASE CONFIG (Render safe)
 # ======================
+# ======================
+# DATABASE CONFIG (Render + Local SAFE)
+# ======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "database.db")
+
+# Render provides writable /tmp directory
+if os.environ.get("RENDER"):
+    DB_PATH = "/tmp/database.db"
+else:
+    DB_PATH = os.path.join(BASE_DIR, "database.db")
+
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
