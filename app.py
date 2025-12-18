@@ -499,33 +499,7 @@ def customer_new_order():
 # ======================
 # SHOPKEEPER DASHBOARD
 # ======================
-@app.route("/shopkeeper/dashboard")
-def shopkeeper_dashboard():
-    if "user" not in session or session["user"]["role"] != "shopkeeper":
-        return redirect(url_for("login"))
 
-    conn = get_db_connection()
-
-    services = conn.execute(
-        "SELECT * FROM services WHERE shop_id=?",
-        (session["user"]["id"],)
-    ).fetchall()
-
-    orders = conn.execute("""
-        SELECT orders.*, users.name AS customer_name, services.name AS service_name
-        FROM orders
-        JOIN users ON orders.customer_id = users.id
-        JOIN services ON orders.service_id = services.id
-        WHERE orders.shop_id = ?
-    """, (session["user"]["id"],)).fetchall()
-
-    conn.close()
-
-    return render_template(
-        "dashboard_shopkeeper.html",
-        services=services,
-        orders=orders
-    )
 
 # ======================
 # RUN
