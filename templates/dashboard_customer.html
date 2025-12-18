@@ -7,7 +7,8 @@
 <div class="glass-card">
     <h2 class="section-title">Place New Order</h2>
 
-    <form method="POST" action="{{ url_for('new_order') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('customer_new_order') }}" enctype="multipart/form-data">
+
         <label class="gold-label">Select Shop</label>
         <select name="shop_id" id="shop-select" required>
             <option value="">-- Select Shop --</option>
