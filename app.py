@@ -10,15 +10,10 @@ app = Flask(__name__)
 app.secret_key = "sira_secret_key"
 
 # ======================
-# DATABASE CONFIG (Render + Local SAFE)
+# DATABASE CONFIG
 # ======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Render uses writable /tmp
-if os.environ.get("RENDER"):
-    DB_PATH = "/tmp/database.db"
-else:
-    DB_PATH = os.path.join(BASE_DIR, "database.db")
+DB_PATH = "/tmp/database.db" if os.environ.get("RENDER") else os.path.join(BASE_DIR, "database.db")
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -67,7 +62,7 @@ def init_db():
     )
     """)
 
-    # ---- DEMO SHOPKEEPER ----
+    # Demo shopkeeper
     shop = conn.execute(
         "SELECT * FROM users WHERE email=?",
         ("demo@shop.com",)
@@ -85,7 +80,7 @@ def init_db():
         ("demo@shop.com",)
     ).fetchone()
 
-    # ---- DEMO SERVICE ----
+    # Demo service
     service = conn.execute(
         "SELECT * FROM services WHERE shop_id=?",
         (shop["id"],)
@@ -94,7 +89,7 @@ def init_db():
     if not service:
         conn.execute(
             "INSERT INTO services (shop_id, name, price) VALUES (?, ?, ?)",
-            (shop["id"], "Black & White Print (Demo)", 2)
+            (shop["id"], "Black & White Print", 2)
         )
         conn.commit()
 
@@ -115,16 +110,16 @@ def index():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        name = request.form["name"]
-        email = request.form["email"]
-        password = request.form["password"]
-        role = request.form["role"]
-
         conn = get_db_connection()
         try:
             conn.execute(
                 "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                (name, email, password, role)
+                (
+                    request.form["name"],
+                    request.form["email"],
+                    request.form["password"],
+                    request.form["role"]
+                )
             )
             conn.commit()
             flash("Account created! Please login.")
@@ -142,19 +137,15 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
-
         conn = get_db_connection()
         user = conn.execute(
             "SELECT * FROM users WHERE email=? AND password=?",
-            (email, password)
+            (request.form["email"], request.form["password"])
         ).fetchone()
         conn.close()
 
         if user:
             session["user"] = dict(user)
-
             if user["role"] == "customer":
                 return redirect(url_for("customer_dashboard"))
             else:
@@ -190,14 +181,13 @@ def customer_dashboard():
         SELECT orders.*, services.name AS service_name
         FROM orders
         JOIN services ON orders.service_id = services.id
-        WHERE customer_id = ?
+        WHERE customer_id=?
     """, (session["user"]["id"],)).fetchall()
 
     conn.close()
 
     return render_template(
         "dashboard_customer.html",
-        user=session["user"],
         shops=shops,
         orders=orders
     )
@@ -223,7 +213,10 @@ def customer_new_order():
 
     conn = get_db_connection()
     conn.execute(
-        "INSERT INTO orders (customer_id, shop_id, service_id, file_name, status) VALUES (?, ?, ?, ?, 'Pending')",
+        """
+        INSERT INTO orders (customer_id, shop_id, service_id, file_name, status)
+        VALUES (?, ?, ?, ?, 'Pending')
+        """,
         (session["user"]["id"], shop_id, service_id, filename)
     )
     conn.commit()
@@ -252,7 +245,7 @@ def shopkeeper_dashboard():
         FROM orders
         JOIN users ON orders.customer_id = users.id
         JOIN services ON orders.service_id = services.id
-        WHERE orders.shop_id = ?
+        WHERE orders.shop_id=?
     """, (session["user"]["id"],)).fetchall()
 
     conn.close()
@@ -262,3 +255,9 @@ def shopkeeper_dashboard():
         services=services,
         orders=orders
     )
+
+# ======================
+# RUN (LOCAL ONLY)
+# ======================
+if __name__ == "__main__":
+    app.run(debug=True)
