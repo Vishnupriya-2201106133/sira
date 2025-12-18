@@ -7,19 +7,15 @@ app = Flask(__name__)
 app.secret_key = "sira_secret_key"
 
 # ======================
-# DATABASE CONFIG (Render safe)
-# ======================
-# ======================
 # DATABASE CONFIG (Render + Local SAFE)
 # ======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Render provides writable /tmp directory
+# Render uses writable /tmp
 if os.environ.get("RENDER"):
     DB_PATH = "/tmp/database.db"
 else:
     DB_PATH = os.path.join(BASE_DIR, "database.db")
-
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -68,7 +64,7 @@ def init_db():
     )
     """)
 
-    # -------- DEMO SHOPKEEPER --------
+    # ---- DEMO SHOPKEEPER ----
     shop = conn.execute(
         "SELECT * FROM users WHERE email = ?",
         ("demo@shop.com",)
@@ -76,8 +72,8 @@ def init_db():
 
     if not shop:
         conn.execute("""
-        INSERT INTO users (name, email, password, role)
-        VALUES (?, ?, ?, ?)
+            INSERT INTO users (name, email, password, role)
+            VALUES (?, ?, ?, ?)
         """, ("Demo Shopkeeper", "demo@shop.com", "demo123", "shopkeeper"))
         conn.commit()
 
@@ -86,7 +82,7 @@ def init_db():
         ("demo@shop.com",)
     ).fetchone()
 
-    # -------- DEMO SERVICE --------
+    # ---- DEMO SERVICE ----
     service = conn.execute(
         "SELECT * FROM services WHERE shop_id = ?",
         (shop["id"],)
@@ -94,8 +90,8 @@ def init_db():
 
     if not service:
         conn.execute("""
-        INSERT INTO services (shop_id, name, price)
-        VALUES (?, ?, ?)
+            INSERT INTO services (shop_id, name, price)
+            VALUES (?, ?, ?)
         """, (shop["id"], "Black & White Print (Demo)", 2))
         conn.commit()
 
@@ -125,7 +121,7 @@ def register():
         try:
             conn.execute(
                 "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                (name, email, password, role),
+                (name, email, password, role)
             )
             conn.commit()
             flash("Account created! Please login.")
@@ -149,13 +145,12 @@ def login():
         conn = get_db_connection()
         user = conn.execute(
             "SELECT * FROM users WHERE email=? AND password=?",
-            (email, password),
+            (email, password)
         ).fetchone()
         conn.close()
 
         if user:
             session["user"] = dict(user)
-            flash("Login successful")
 
             if user["role"] == "customer":
                 return redirect(url_for("customer_dashboard"))
@@ -205,10 +200,10 @@ def customer_dashboard():
     )
 
 # ======================
-# NEW ORDER (🔥 FIXED)
+# NEW ORDER (FIXED ROUTE)
 # ======================
-@app.route("/new_order", methods=["POST"])
-def new_order():
+@app.route("/customer/new_order", methods=["POST"])
+def customer_new_order():
     if "user" not in session or session["user"]["role"] != "customer":
         return redirect(url_for("login"))
 
